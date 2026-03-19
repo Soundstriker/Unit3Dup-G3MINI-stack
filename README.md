@@ -1,45 +1,182 @@
-# Unit3Dup-G3MINI Stack
+# Unit3Dup — Fork G3MINI
 
-Docker stack for [Unit3Dup-G3MINI](https://github.com/lantiumBot/Unit3Dup-G3MINI), ready for local Docker use and easy deployment on NAS, Portainer, or Dockhand.
+Fork de [Unit3Dup](https://github.com/31December99/Unit3Dup) adapté pour **G3MINI Tracker**.
 
-This repository focuses on containerized deployment:
+Ce fork ajoute la normalisation automatique des noms de release selon les conventions du tracker, la détection du flag `personal_release` par tag d'équipe, et le nettoyage automatique des fichiers `.nfo` orphelins.
 
-- `Dockerfile`
-- `docker-compose.yml`
-- persistent `/config`, `/watch`, `/done`, `/data` volumes
-- non-root runtime support
-- container-safe HTTP cache handling
+---
 
-## What This Repo Is For
+## Fonctionnalités ajoutées
 
-This repo is meant for users who want to run Unit3Dup-G3MINI with Docker instead of installing Python and dependencies manually.
+- **Normalisation des noms de release** : les noms sont automatiquement reformatés selon les conventions G3MINI (`Titre.Année.Langue.Résolution.HDR.Source.Audio.Codec-TEAM`)
+- **Détection `personal_release`** : si le tag de la release (ex: `-KFL`) correspond à un tag configuré dans `TAGS_TEAM`, le champ `personal_release` est automatiquement coché à l'upload
+- **Nettoyage des `.nfo` orphelins** : le watcher supprime automatiquement les fichiers `.nfo` isolés après traitement
 
-It keeps the original application code and adds the Docker pieces needed to:
+---
 
-- build the container locally
-- run the watcher in a persistent stack
-- deploy more easily on a NAS
+## Installation
 
-## Included Files
+### Prérequis
+
+```bash
+sudo apt install ffmpeg python3 python3-pip python3-venv git
+```
+
+Il vous faut la version 3.13.5 de Python3
+
+### Cloner le repo
+
+```bash
+git clone https://github.com/lantiumBot/Unit3Dup-G3MINI ~/unit3dup
+cd ~/unit3dup
+```
+
+### Créer un environnement virtuel et installer
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+L'option `-e` (editable) permet de recevoir les mises à jour du fork simplement avec un `git pull`, sans réinstaller.
+
+### Vérifier l'installation
+
+```bash
+unit3dup --help
+```
+
+Si la commande n'est pas trouvée, active d'abord le venv manuellement :
+
+```bash
+source .venv/bin/activate
+unit3dup --help
+```
+
+---
+
+### Wrapper (optionnel mais recommandé)
+
+Le wrapper permet d'utiliser `unit3dup` depuis n'importe où **sans activer le venv manuellement** à chaque fois. Il détecte automatiquement son emplacement — peu importe où tu as cloné le repo.
+
+Rends-le exécutable et crée le symlink :
+
+```bash
+chmod +x ~/unit3dup/unit3dup-wrapper.sh
+sudo ln -s ~/unit3dup/unit3dup-wrapper.sh /usr/local/bin/unit3dup
+```
+
+Vérifie que ça fonctionne :
+
+```bash
+which unit3dup
+unit3dup --help
+```
+
+---
+
+## Configuration
+
+### Étape 1 — Générer la configuration initiale
+
+Au premier lancement, unit3dup crée automatiquement le dossier `~/Unit3Dup_config/` avec un fichier `Unit3Dbot.json` pré-rempli :
+
+```bash
+unit3dup --help
+```
+
+### Étape 2 — Remplir la configuration
+
+```bash
+nano ~/Unit3Dup_config/Unit3Dbot.json
+```
+
+Les champs essentiels à renseigner :
+
+| Champ | Description | Requis |
+|---|---|---|
+| `Gemini_URL` | URL de G3MINI | ✅ |
+| `Gemini_APIKEY` | Clé API (profil G3MINI) | ✅ |
+| `Gemini_PID` | Ton passkey | ✅ |
+| `TMDB_APIKEY` | Clé gratuite sur [themoviedb.org](https://www.themoviedb.org/settings/api) | ✅ |
+| `WATCHER_PATH` | Chemin vers ton dossier de watch (la où sont les releases à upload) | ✅ |
+| `WATCHER_DESTINATION_PATH` | Chemin de destination des releases après l'upload | ✅ |
+| `IMGBB_KEY` | Clé gratuite sur [imgbb.com](https://imgbb.com) pour les screenshots | ✅ |
+
+> **Permissions :** Assure-toi que l'utilisateur qui lance unit3dup a bien les droits en lecture sur `WATCHER_PATH` et en écriture sur `WATCHER_DESTINATION_PATH`. Si ces dossiers sont sur un montage NFS ou un partage réseau, vérifie aussi que le montage est actif avant de lancer le watcher.
+
+### Étape 3 — Ajouter tes tags d'équipe
+
+La section `uploader_tag` n'est **pas générée automatiquement**, il faut l'ajouter manuellement dans le JSON :
+
+```json
+"uploader_tag": {
+    "TAGS_TEAM": ["MONTAG"]
+}
+```
+
+Si ta release se termine par `-MONTAG`, le champ `personal_release` sera automatiquement activé à l'upload. Tu peux mettre plusieurs tags dans le tableau.
+
+---
+
+## Utilisation
+
+```bash
+# Uploader un fichier
+unit3dup -u /chemin/vers/fichier.mkv
+
+# Uploader un dossier entier
+unit3dup -f /chemin/vers/dossier
+
+# Scanner un dossier
+unit3dup -scan /chemin/vers/dossier
+```
+
+---
+
+## Mise à jour
+
+```bash
+cd ~/unit3dup
+git pull
+```
+
+Pas besoin de réinstaller grâce au mode `-e`. Si des nouvelles dépendances ont été ajoutées :
+
+```bash
+source .venv/bin/activate
+pip install -e .
+```
+
+---
+
+## Projet original
+
+Ce fork est basé sur [Unit3Dup](https://github.com/31December99/Unit3Dup) — licence MIT.
+
+---
+
+## Docker / NAS
+
+Une stack Docker prête à l'emploi est disponible à la racine du dépôt avec :
 
 - `Dockerfile`
 - `docker-compose.yml`
 - `.dockerignore`
 
-The container stores its config in `/config` through `UNIT3DUP_CONFIG_ROOT=/config`.
+Le conteneur utilise ce fork localement et stocke sa configuration dans `/config` via la variable d'environnement `UNIT3DUP_CONFIG_ROOT`.
 
-## Default Volumes
+### Volumes par défaut
 
-The default compose file uses:
+Le `docker-compose.yml` monte ces dossiers :
 
 - `./docker-data/config` -> `/config`
 - `./docker-data/watch` -> `/watch`
 - `./docker-data/done` -> `/done`
 - `./docker-data/media` -> `/data`
 
-For a NAS, replace them with your real shared folders.
-
-Example:
+Sur un NAS, remplace de préférence ces chemins par tes partages absolus, par exemple :
 
 ```yaml
 volumes:
@@ -49,119 +186,71 @@ volumes:
   - /volume1/media:/data
 ```
 
-## Quick Start
-
-### 1. Build the image
+### 1. Construire l'image
 
 ```bash
 docker compose build
 ```
 
-### 2. Generate the initial config
+### 2. Générer la configuration initiale
+
+Lance une première fois l'outil pour créer `/config/Unit3Dbot.json` :
 
 ```bash
 docker compose run --rm unit3dup --help
 ```
 
-This creates:
+### 3. Éditer la configuration
 
-- `/config/Unit3Dbot.json`
-- cache and archive folders inside `/config`
-
-### 3. Edit `Unit3Dbot.json`
-
-Minimum required fields:
-
-- `Gemini_URL`
-- `Gemini_APIKEY`
-- `Gemini_PID`
-- `TMDB_APIKEY`
-- `IMGBB_KEY`
-- `WATCHER_PATH`
-- `WATCHER_DESTINATION_PATH`
-
-For Docker, the usual values are:
+Modifie ensuite `Unit3Dbot.json` dans ton dossier `config` et adapte au minimum :
 
 ```json
 "WATCHER_PATH": "/watch",
 "WATCHER_DESTINATION_PATH": "/done"
 ```
 
-If you use an external torrent client, also adjust the client section:
+Renseigne aussi :
+
+- `Gemini_URL`
+- `Gemini_APIKEY`
+- `Gemini_PID`
+- `TMDB_APIKEY`
+- `IMGBB_KEY`
+
+Si tu utilises un client torrent externe sur le NAS, pense également à corriger :
 
 - `QBIT_HOST` / `QBIT_PORT`
-- or `TRASM_HOST` / `TRASM_PORT`
-- or `RTORR_HOST` / `RTORR_PORT`
+- ou `TRASM_HOST` / `TRASM_PORT`
+- ou `RTORR_HOST` / `RTORR_PORT`
 
-### 4. Start the watcher
+### 4. Lancer le watcher
 
 ```bash
 docker compose up -d
 ```
 
-### 5. Read logs
+Le service démarre avec la commande `-watcher`.
+
+### 5. Lancer un upload manuel
+
+Pour envoyer un fichier déjà présent dans le volume `/data` :
 
 ```bash
-docker compose logs -f
+docker compose run --rm unit3dup -u /data/mon_fichier.mkv
 ```
 
-## Manual Commands
-
-Scan a folder:
+Pour scanner un dossier :
 
 ```bash
-docker compose run --rm unit3dup -scan /data/my_folder
+docker compose run --rm unit3dup -scan /data/mon_dossier
 ```
 
-Upload a file:
+### Permissions NAS
 
-```bash
-docker compose run --rm unit3dup -u /data/my_file.mkv
-```
-
-Generate config only:
-
-```bash
-docker compose run --rm unit3dup --help
-```
-
-## Portainer / Dockhand
-
-This repository currently ships with a compose file using `build:`.
-
-That is the simplest setup for:
-
-- local Docker
-- Portainer environments that support building from a project folder
-- NAS testing before publishing a prebuilt image
-
-If you prefer an `image:`-only stack later, you can publish the built image and replace `build:` with your registry image tag.
-
-## Permissions
-
-The compose file uses:
+Le compose utilise :
 
 ```yaml
 user: "${PUID:-1000}:${PGID:-1000}"
 ```
 
-If your NAS uses a different user or group ID, set `PUID` and `PGID` accordingly.
-
-## Security Notes
-
-- Do not commit your `Unit3Dbot.json`
-- Do not put API keys in `docker-compose.yml`
-- Do not commit `.env` files with secrets
-- Keep personal paths in local overrides only
-
-This repository ignores local config and test overrides by default.
-
-## Upstream Project
-
-Original project:
-
-- [Unit3Dup-G3MINI](https://github.com/lantiumBot/Unit3Dup-G3MINI)
-
-Base project:
-
-- [Unit3Dup](https://github.com/31December99/Unit3Dup)
+Adapte `PUID` et `PGID` à l'utilisateur de ton NAS si besoin pour éviter les problèmes d'accès sur les partages.
