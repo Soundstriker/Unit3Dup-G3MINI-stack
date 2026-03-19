@@ -26,6 +26,7 @@ COPY view ./view
 RUN pip install --upgrade pip && \
     pip install .
 
-RUN mkdir -p /config /watch /done /data "$HOME"
+RUN mkdir -p /config /watch /done /data "$HOME" && \
+    chmod 777 "$HOME"
 
 ENTRYPOINT ["unit3dup"]

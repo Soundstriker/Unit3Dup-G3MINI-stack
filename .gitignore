@@ -24,6 +24,7 @@ unti3dupManyx/
 Unit3Dup_config/
 docker-data/
 config/
+docker-compose.override.yml
 
 # Config personnelle (ne jamais committer)
 *.json
