@@ -29,5 +29,6 @@ dependencies = {file = ["requirements.txt"]}
 
 [project.scripts]
 unit3dup = "unit3dup.__main__:main"
+unit3dup-web = "unit3dup.web.main:serve"
 
 

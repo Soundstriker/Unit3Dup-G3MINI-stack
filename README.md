@@ -254,3 +254,32 @@ user: "${PUID:-1000}:${PGID:-1000}"
 ```
 
 Adapte `PUID` et `PGID` à l'utilisateur de ton NAS si besoin pour éviter les problèmes d'accès sur les partages.
+
+### Petite interface web
+
+Une interface web minimale est aussi disponible pour piloter le dossier watcher sans passer par la CLI.
+
+Elle permet de :
+
+- lister le contenu du watcher
+- lancer un dry-run sur un element
+- lancer un upload sans seed ou avec seed
+- consulter le statut et les logs du dernier job
+- modifier les principaux champs du `Unit3Dbot.json` depuis une page `Settings`
+
+Le service web est optionnel et utilise le profil Compose `web` :
+
+```bash
+docker compose --profile web up -d unit3dup-web
+```
+
+Puis ouvre :
+
+```text
+http://localhost:8787
+```
+
+Important :
+
+- n'utilise pas les actions manuelles de l'interface en meme temps que le conteneur watcher sur le meme dossier
+- l'interface ne remplace pas le fichier `Unit3Dbot.json`, elle s'appuie dessus
